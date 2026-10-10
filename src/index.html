@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slipstream</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="hud"></canvas>
+  <div id="mouseaim"></div>
+</div>
+
+<!-- LOADING -->
+<section id="loading" class="screen active">
+  <div class="load-inner">
+    <div class="brand big"><span class="mark"></span>SLIPSTREAM</div>
+    <div class="load-bar"><i id="loadFill"></i></div>
+    <div class="load-status mono" id="loadStatus">INITIALIZING</div>
+  </div>
+</section>
+
+<!-- MAIN MENU -->
+<section id="menu" class="screen">
+  <div class="rail">
+    <div class="brand"><span class="mark"></span>SLIPSTREAM</div>
+    <div class="tag mono">AERODYNAMIC FLIGHT &amp; AIR COMBAT</div>
+    <nav class="mainnav">
+      <button data-go="free"><b class="mono">01</b><span>Free Flight</span><em>Any aircraft, any airfield, any weather.</em></button>
+      <button data-go="dogfight"><b class="mono">02</b><span>Dogfight</span><em>Guns, heat-seekers, radar missiles. AI that flies real physics.</em></button>
+      <button data-go="landing"><b class="mono">03</b><span>Landing Challenge</span><em>Fly the approach. Graded on sink rate, centerline and touchdown.</em></button>
+      <button data-go="settings"><b class="mono">04</b><span>Settings</span><em>Graphics, controls, assists, audio.</em></button>
+      <button data-go="controls"><b class="mono">05</b><span>Controls</span><em>Keyboard, mouse and gamepad reference.</em></button>
+      <button data-go="quit" class="quit"><b class="mono">—</b><span>Quit</span></button>
+    </nav>
+    <div class="railfoot mono" id="sysinfo"></div>
+  </div>
+  <div class="showcase">
+    <div class="sc-role mono" id="scRole"></div>
+    <div class="sc-name" id="scName"></div>
+    <div class="sc-desc" id="scDesc"></div>
+  </div>
+</section>
+
+<!-- MISSION SETUP -->
+<section id="setup" class="screen">
+  <header class="crumbs mono"><button class="back" data-back>◂ BACK</button><span>SLIPSTREAM</span><i>/</i><span id="setupMode">FREE FLIGHT</span><i>/</i><span class="hl">SETUP</span></header>
+  <div class="cols">
+    <div class="panel col-air">
+      <h3><b class="mono">01</b>Airframe</h3>
+      <div class="list" id="acList"></div>
+    </div>
+    <div class="panel col-loc">
+      <h3><b class="mono">02</b>Theatre</h3>
+      <canvas id="mapCv" width="560" height="560"></canvas>
+      <div class="list small" id="locList"></div>
+      <div class="field" id="spawnField"><label class="mono">START</label><div class="seg" id="spawnSeg"></div></div>
+    </div>
+    <div class="panel col-cond">
+      <h3><b class="mono">03</b>Conditions</h3>
+      <div class="field"><label class="mono">TIME OF DAY <output id="todOut"></output></label><input type="range" id="tod" min="0" max="24" step="0.25" value="15.5"></div>
+      <div class="field"><label class="mono">SKY</label><div class="seg" id="wxSeg"></div></div>
+      <div class="field"><label class="mono">WIND <output id="windOut"></output></label><input type="range" id="wind" min="0" max="25" step="1" value="4"></div>
+      <div class="field"><label class="mono">WIND FROM <output id="wdirOut"></output></label><input type="range" id="wdir" min="0" max="350" step="10" value="250"></div>
+      <div class="field"><label class="mono">TURBULENCE <output id="turbOut"></output></label><input type="range" id="turb" min="0" max="3" step="1" value="1"></div>
+      <div id="combatBox">
+        <h3 class="sub"><b class="mono">04</b>Engagement</h3>
+        <div class="field"><label class="mono">HOSTILES</label><div class="stepper" id="nEnemy"></div></div>
+        <div class="field"><label class="mono">HOSTILE TYPE</label><select id="enemyType"></select></div>
+        <div class="field"><label class="mono">PILOT SKILL</label><div class="seg" id="skillSeg"></div></div>
+        <div class="field"><label class="mono">WINGMEN</label><div class="stepper" id="nAlly"></div></div>
+        <div class="field"><label class="mono">MERGE</label><div class="seg" id="startSeg"></div></div>
+        <div class="field"><label class="mono">ARMAMENT</label><div class="seg" id="armSeg"></div></div>
+        <div class="field"><label class="mono">WAVES</label><div class="seg" id="waveSeg"></div></div>
+      </div>
+    </div>
+  </div>
+  <footer class="launchbar">
+    <div class="summary mono" id="summary"></div>
+    <button class="launch" id="launchBtn"><span>LAUNCH</span><i class="mono">ENTER</i></button>
+  </footer>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings" class="screen">
+  <header class="crumbs mono"><button class="back" data-back>◂ BACK</button><span>SLIPSTREAM</span><i>/</i><span class="hl">SETTINGS</span></header>
+  <div class="cols two">
+    <div class="panel">
+      <h3><b class="mono">A</b>Graphics</h3>
+      <div class="field"><label class="mono">QUALITY</label><div class="seg" id="qSeg"></div></div>
+      <div class="field"><label class="mono">DYNAMIC RESOLUTION</label><div class="seg" id="dynSeg"></div></div>
+      <div class="field"><label class="mono">G-EFFECTS (BLACKOUT / REDOUT)</label><div class="seg" id="gfxSeg"></div></div>
+      <div class="field"><label class="mono">FIELD OF VIEW <output id="fovOut"></output></label><input type="range" id="fov" min="50" max="100" step="1" value="72"></div>
+      <p class="note">Rendering runs on the GPU through WebGL 2 → Metal. "Performance" renders at 1× pixel density with 2× MSAA; "Ultra" renders at full Retina density with 4× MSAA and 4K shadows.</p>
+    </div>
+    <div class="panel">
+      <h3><b class="mono">B</b>Flight &amp; Controls</h3>
+      <div class="field"><label class="mono">FLIGHT ASSIST</label><div class="seg" id="assistSeg"></div></div>
+      <div class="field"><label class="mono">CONTROL MODE</label><div class="seg" id="ctlSeg"></div></div>
+      <div class="field"><label class="mono">INVERT PITCH</label><div class="seg" id="invSeg"></div></div>
+      <div class="field"><label class="mono">MOUSE SENSITIVITY <output id="sensOut"></output></label><input type="range" id="sens" min="0.3" max="2.5" step="0.1" value="1"></div>
+      <div class="field"><label class="mono">UNITS</label><div class="seg" id="unitSeg"></div></div>
+      <div class="field"><label class="mono">MASTER VOLUME <output id="volOut"></output></label><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></div>
+      <div class="field"><label class="mono">JET ENGINE VOLUME <output id="jetvOut"></output></label><input type="range" id="jetv" min="0" max="1.5" step="0.05" value="1"></div>
+      <div class="field"><label class="mono">PROP ENGINE VOLUME <output id="propvOut"></output></label><input type="range" id="propv" min="0" max="1.5" step="0.05" value="1"></div>
+      <div class="field"><label class="mono">WIND / AIRFLOW NOISE <output id="windvOut"></output></label><input type="range" id="windv" min="0" max="1.5" step="0.05" value="1"></div>
+      <div class="field"><label class="mono">MUSIC — SATIE, GYMNOP&Eacute;DIE NO. 1 <output id="musOut"></output></label><input type="range" id="mus" min="0" max="1" step="0.05" value="0.5"></div>
+      <p class="note">Flight assist ON: every aircraft uses a rate-command flight computer (the surfaces still move the air — the computer just moves them for you). OFF: piston aircraft get raw stick-to-surface linkage, so you can stall, spin and fight torque yourself. Jets with real fly-by-wire keep it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTROLS -->
+<section id="controls" class="screen">
+  <header class="crumbs mono"><button class="back" data-back>◂ BACK</button><span>SLIPSTREAM</span><i>/</i><span class="hl">CONTROLS</span></header>
+  <div class="cols three keys" id="keyGrid"></div>
+</section>
+
+<!-- PAUSE -->
+<section id="pause" class="screen overlay">
+  <div class="pause-box">
+    <div class="mono small-title">PAUSED</div>
+    <nav class="mainnav compact">
+      <button data-pause="resume"><b class="mono">ESC</b><span>Resume</span></button>
+      <button data-pause="restart"><b class="mono">R</b><span>Restart</span></button>
+      <button data-pause="controls"><b class="mono">F1</b><span>Controls</span></button>
+      <button data-pause="settings"><b class="mono">⚙</b><span>Settings</span></button>
+      <button data-pause="menu"><b class="mono">◂</b><span>Exit to Menu</span></button>
+    </nav>
+  </div>
+</section>
+
+<!-- DEBRIEF -->
+<section id="debrief" class="screen overlay">
+  <div class="debrief-box panel">
+    <div class="mono small-title" id="dbKind">DEBRIEF</div>
+    <div class="db-title" id="dbTitle"></div>
+    <div class="db-sub" id="dbSub"></div>
+    <div class="db-grid mono" id="dbGrid"></div>
+    <div class="db-actions">
+      <button class="launch ghost" data-db="menu"><span>MENU</span></button>
+      <button class="launch ghost" data-db="continue" id="dbContinue"><span>CONTINUE FLYING</span></button>
+      <button class="launch" data-db="restart"><span>FLY AGAIN</span><i class="mono">R</i></button>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="mono"></div>
+<div id="fps" class="mono"></div>
+<div id="err" class="mono"></div>
+
+<script src="js/util.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/shaders.js"></script>
+<script src="js/ocean.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/world.js"></script>
+<script src="js/aircraft_data.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/aero.js"></script>
+<script src="js/fcs.js"></script>
+<script src="js/aircraft.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/input.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

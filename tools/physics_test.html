@@ -1,0 +1,52 @@
+<!doctype html><html><body style="background:#111;color:#ddd;font:12px monospace"><pre id=o></pre>
+<script src="../src/js/util.js"></script>
+<script src="../src/js/geometry.js"></script>
+<script src="../src/js/aircraft_data.js"></script>
+<script src="../src/js/aero.js"></script>
+<script src="../src/js/fcs.js"></script>
+<script src="../src/js/aircraft.js"></script>
+<script>
+const out = document.getElementById('o'); const log = s => { out.textContent += s + '\n'; };
+const flatWorld = { surfaceAt(x,z,o){ o.h=0; o.type=0; o.water=false; o.carrier=false; return o; },
+  carrier: { deckAt(){return -Infinity;}, insideHull(){return false;}, vel:new V3() } };
+function staticMargin(fm, V) {
+  const F=new V3(), M=new V3(); const r={};
+  fm.w.set(0,0,0); fm.out.agl=1000; Atmos.at(0, fm.atm);
+  const ev=(a)=>{ const vb=new V3(0,-V*Math.sin(a),-V*Math.cos(a)); F.set(0,0,0); M.set(0,0,0); for(const s of fm.segs){s.vind.set(0,0,0);s.gamma=0;}
+    for(let i=0;i<3;i++){ F.set(0,0,0); M.set(0,0,0); fm.aeroPanels(1/120, vb, V/340, 1.225, F, M, null); for(const s of fm.segs) s.vind.copy(s.vindRaw);} fm.aeroBody(vb,V,V/340,0.5*1.225*V*V,1.225,F,M); return [F.y, M.x]; };
+  const a=ev(2*DEG), b=ev(6*DEG); const dL=(b[0]-a[0]), dM=(b[1]-a[1]);
+  return { SM: -dM/dL/fm.wingMAC, CLa: dL/(4*DEG)/(0.5*1.225*V*V*fm.Sref), M2: a[1], L2: a[0] };
+}
+function simulate(spec, opt) {
+  const ac = new Aircraft(spec, 'blue', true); const fm = ac.fm, fcs = ac.fcs; spec = ac.spec;
+  const sm = staticMargin(fm, spec.vref); sm.shift = PREPARED[spec.id].cgShift;
+  fm.setState(new V3(0, opt.alt, 0), 0, 0, opt.v0, false);
+  fm.ctl.gearTarget = 0; fm.ctl.gear = fm.gearRetract ? 0 : 1;
+  fm.ctl.throttle = opt.thr; fm.eng.n = 1; fm.eng.running = spec.engine.type !== 'none';
+  const dt = 1/120; let maxV=0; const inp={pitch:0,roll:0,yaw:0};
+  let t=0; const rec=[];
+  for (let i=0;i<opt.secs*120;i++){
+    // simple altitude hold: pitch command from altitude error
+    const e = fm.euler();
+    if (opt.hold) { const vs = fm.vel.y; inp.pitch = clamp((opt.alt - fm.pos.y)*0.004 - vs*0.02 - (e.pitch*DEG)*0.0, -0.4, 0.4); inp.roll = clamp(-e.roll*0.02, -1, 1); }
+    if (opt.step && t>2 && t<2.5) inp.pitch = opt.step; else if (opt.step && t>=2.5) inp.pitch=0;
+    fcs.update(dt, inp, true); fm.step(dt, flatWorld); t+=dt;
+    if (fm.crashed) { rec.push('CRASH '+fm.crashReason+' t='+t.toFixed(1)); break; }
+    if (i%(120*opt.every)===0) rec.push(`t=${t.toFixed(0)} V=${fm.out.tas.toFixed(0)} M=${fm.out.mach.toFixed(2)} alt=${fm.pos.y.toFixed(0)} a=${fm.out.alpha.toFixed(1)} G=${fm.out.G.toFixed(2)} pitch=${e.pitch.toFixed(1)} roll=${e.roll.toFixed(1)} T=${(fm.eng.thrust/1000).toFixed(1)}k up=${fcs.out.pitch.toFixed(2)}`);
+  }
+  return { sm, rec, fm, fcs };
+}
+window.runAll = function(which){
+  out.textContent='';
+  for (const spec of AIRCRAFT) {
+    if (which && spec.id!==which) continue;
+    try {
+      const alt = spec.id==='condor'?1500:(spec.engine.type==='jet'?3000:1000);
+      const r = simulate(spec, {alt, v0: spec.vref, thr: 1, secs: 90, hold:true, every: 15});
+      log(`== ${spec.id}  SM=${(r.sm.SM*100).toFixed(1)}% cg=${r.sm.shift.toFixed(2)} cd0x=${r.fm.cd0x.toFixed(4)}  CLa=${r.sm.CLa.toFixed(2)}/rad  Pp=${(r.fcs.Pp/1000).toFixed(0)}k Pr=${(r.fcs.Pr/1000).toFixed(0)}k Py=${(r.fcs.Py/1000).toFixed(0)}k  segs=${r.fm.segs.length} parts=${r.fm.geo.parts.length}`);
+      r.rec.forEach(x=>log('   '+x));
+    } catch(e) { log('ERR '+spec.id+': '+e.stack); }
+  }
+  return out.textContent;
+};
+</script></body></html>
